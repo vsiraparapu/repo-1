@@ -1,0 +1,51 @@
+node {
+	try {
+		stage ('Checkout')
+		{
+			checkout scm 
+			bat "\"C:\" merge origin/${Branch}"
+		}
+		stage ('Build')
+		{
+			bat "nuget restore \"${workspace}/YourProject.sln\""
+			bat "\"" restore \"${workspace}/YourProject.sln\""
+			bat "\"" build \"${workspace}/YourProject.sln\""
+		}
+		stage ('UnitTests')
+		{
+			bat returnStatus: true, script: "\"C:/Program Files/dotnet/dotnet.exe\" test \"${workspace}/YourProject.sln\" --logger \"trx;LogFileName=unit_tests.xml\" --no-build"
+			step([$class: 'nunit testResultsPattern: 'testresult.xml'', testResultsFile:"**/unit_tests.xml", failOnError: true, keepLongStdio: true])
+			def allTestPassed = allTestPass()
+			if(allTestPassed == false)
+		
+		}
+		
+		def jobName = currentBuild.fullDisplayName
+		def committer = emailextrecipients([[$class: 'CulpritsRecipientProvider'],[$class: 'DevelopersRecipientProvider'],[$class: 'RequesterRecipientProvider']])
+		def allchanges = changelist()
+		
+		stage('Send email') 
+        {
+			echo "committer = ${committer}"
+			echo "allchanges = ${allchanges}"
+            sendmail(jobName,committer)
+        }
+	} catch (Exception err) {
+		stage('Finishing') 
+        {
+			notify('FAILED')
+            currentBuild.result = 'Fail'
+            sendmail(jobName,committer)
+        }
+	}
+}
+
+def sendmail(jobName,committer){
+	def mailRecipients = ""
+	emailext body: '''${JELLY_SCRIPT,template="PlaygroundMerge"}''',
+                mimeType: 'text/html',
+                subject: "Merge job create by ${committer} status - ${currentBuild.result}",
+                to: "${mailRecipients};${committer}",
+                replyTo: "${mailRecipients}",
+                recipientProviders: [[$class: 'CulpritsRecipientProvider']]
+}
