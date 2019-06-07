@@ -49,3 +49,18 @@ def sendmail(jobName,committer){
                 replyTo: "${mailRecipients}",
                 recipientProviders: [[$class: 'CulpritsRecipientProvider']]
 }
+ stage ('Deploy to Dev')
+   {
+       steps {
+        sh 'echo "Deploy to Dev"'
+       }
+   }
+  stage ('Deploy To Prod'){
+  input{
+    message "Do you want to proceed for production deployment?"
+  }
+    steps {
+                sh 'echo "Deploy into Prod"'
+
+              }
+        }
